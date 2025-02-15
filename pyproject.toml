@@ -28,7 +28,8 @@ dependencies = [
   "pillow~=11.1.0",
   "streamdeck~=0.9.6",
   "onkyo-eiscp~=1.2.7",
-  "click~=8.1.8"
+  "click~=8.1.8",
+  "coloredlogs~=15.0.1"
 ]
 
 [project.urls]
