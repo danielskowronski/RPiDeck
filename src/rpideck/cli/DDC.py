@@ -3,17 +3,22 @@
 #
 # SPDX-License-Identifier: MIT
 import subprocess
+import logging
 
 
 class DDCLinux:
+    def __init__(self, logger_name=__name__):
+        self.logger = logging.getLogger(logger_name)
+
     def readVCP(self, vcp):
         current = subprocess.run(
             ["/usr/bin/ddcutil", "getvcp", "--brief", "0x{:02X}".format(vcp)],
             capture_output=True,
             text=True,
         )
+        self.logger.info(current)
         if current.returncode != 0:
-            logger.warn(f"getvcp for {vcp} exited with {current.returncode}")
+            self.logger.warning(f"getvcp for {vcp} exited with {current.returncode}")
             return None
         current_out = str(current.stdout).split("\n")[0].split(" ")
         current_value = int(f"0{current_out[3]}", 16)  # FIXME: multibyte values
@@ -39,4 +44,4 @@ class DDCLinux:
             capture_output=True,
             text=True,
         )
-        # logger.info(action)
+        self.logger.info(action)

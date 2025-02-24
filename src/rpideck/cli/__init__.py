@@ -20,15 +20,17 @@ def rpideck():
     logger = logging.getLogger(__name__)
     logging.basicConfig(
         format="%(asctime)s %(levelname)-8s %(message)s",
-        level=logging.INFO,
+        #level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[logging.FileHandler("debug.log", mode="a"), logging.StreamHandler()],
+        #handlers=[logging.FileHandler("debug.log", mode="a"), logging.StreamHandler()],
     )
-    coloredlogs.install()
 
     rd = RPiDeck(
         "~/.config/rpideck"
     )  # FIXME: paramatrize this and split to config and assets path
+    logger.setLevel(rd.config.logging["level"])
+    coloredlogs.install(level=rd.config.logging["level"])
+
     rd.openDeck()
     rd.initializeDeck()
     for t in threading.enumerate():

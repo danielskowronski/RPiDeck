@@ -54,9 +54,12 @@ class RPiDeckConfig:
         PAGE_SCHEMA = Schema({"keys": {str: KEY_SCHEMA}})
         return Schema(
             {
-                "ddc": object,
+                "ddc": object, # TODO: implement this
                 "avr": {
                     "ip": str,
+                },
+                "logging": {
+                    "level": And(str, lambda t: t in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
                 },
                 "deck": {
                     "brightness": lambda n: 0 <= n <= 100,
@@ -69,7 +72,7 @@ class RPiDeckConfig:
         )
 
     def __init__(self, path, logger_name=__name__):
-        logger = logging.getLogger(logger_name)
+        self.logger = logging.getLogger(logger_name)
         cfg_path = os.path.join(os.path.expanduser(path), "rpideck.yml")
         self.assets_path = os.path.join(os.path.expanduser(path), "assets")
 
@@ -81,6 +84,7 @@ class RPiDeckConfig:
         self.ddc = validated["ddc"]
         self.avr = validated["avr"]
         self.deck = validated["deck"]
+        self.logging = validated["logging"]
 
     def getKeyInfo(self, position, page=0, isPresssedDown=False):
         key_name = None

@@ -25,7 +25,6 @@ from rpideck.cli.AVR import AVR
 class RPiDeck:
     def __init__(self, config_path="~/.config/rpideck", logger_name=__name__):
         self.logger = logging.getLogger(logger_name)
-        print(logger_name)
         self.config = RPiDeckConfig(config_path, logger_name)
         self.display_lock = Lock()
         self.deck = None
@@ -186,7 +185,7 @@ class RPiDeck:
         self.logger.exception("Uncaught exception: {0}".format(str(value)))
 
     def sigintHandler(self, sig, frame):
-        self.logger.info("SIGINT")
+        self.logger.warning("caught SIGINT")
         with self.deck:
             self.deck.reset()
             self.deck.close()
