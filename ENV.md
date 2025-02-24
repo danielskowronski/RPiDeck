@@ -74,4 +74,32 @@ apt install git pipx
 pipx install hatch
 ```
 
+## Running as a systemd service
 
+The simplest way to run this as a service is to create user systemd service. 
+
+I created a dedicated user `rpideck` for that purpose. It's important to keep this user in `i2c` group so it can interact with DDC (e.g. by `sudo usermod -G i2c -a rpideck`; first user in system is usually member of `adm` which covers I2C access). USB access in this scenario was granted by udev rules for group `users` (although it could be safer to get a separate group). 
+
+Then you need to install this package under dedicated user, for example using `pipx install rpideck`. Follow instructions from [README.md](./README.md) to set config file and assets pack.
+
+To define a user systemd service, place the following file as `~/.config/systemd/user/rpideck.service`:
+
+```
+[Unit]
+Description=RPiDeck
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=/home/<USERNAME>/.local/pipx/venvs/rpideck/bin/rpideck
+Restart=always
+RestartSec=1
+KillSignal=SIGINT
+TimeoutStopSec=10
+RestartKillSignal=SIGINT
+
+[Install]
+WantedBy=default.target
+```
+
+The final step is to enable it by calling `systemctl --user enable --now rpideck`. Logs can be observed with `journalctl --user -fu rpideck`.
