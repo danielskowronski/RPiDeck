@@ -14,6 +14,14 @@ Future devices to be supported:
 
 [ENV.md](./ENV.md) contains critical information about the environment where this project can be installed.
 
+## Installation
+
+[![PyPI: rpideck](https://img.shields.io/pypi/v/rpideck?style=flat-square&label=PyPI%3A%20rpideck)](https://pypi.org/project/rpideck/)
+
+```bash
+pipx install rpideck
+```
+
 ## CLI usage
 
 Config and assets must be placed under `~/.config/rpideck`. See examples in [example_config](./example_config/).
