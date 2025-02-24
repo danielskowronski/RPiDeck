@@ -1,0 +1,142 @@
+---
+ddc: null
+avr:
+  ip: 192.168.0.2
+deck:
+  matchSerial: AAAAAAAAAAAAAA
+  brightness: 50
+  font: Roboto-Regular.ttf
+  highlightColour: "#2E7D32"
+  pages:
+    - keys:
+        ddc_nya:
+          position: 0
+          icon: ddc_nya.png
+          label: "KVM NYA"
+          steps:
+            - text: "DDC PBP OFF"
+              type: ddc
+              parameters:
+                vcp: 0xE9
+                value: 0x00
+            - text: "DDC input DisplayPort"
+              type: ddc
+              parameters:
+                vcp: 0x60
+                value: 0x0F
+            - text: "AVR MacStudio"
+              type: eiscp
+              parameters:
+                cmd: source
+                value: tv
+        ddc_corp:
+          position: 1
+          icon: ddc_corp.png
+          label: "KVM CORP"
+          steps:
+            - text: "DDC PBP OFF"
+              type: ddc
+              parameters:
+                vcp: 0xE9
+                value: 0x00
+            - text: "DDC input USB-C"
+              type: ddc
+              parameters:
+                vcp: 0x60
+                value: 0x19
+        ddc_game:
+          position: 2
+          icon: ddc_hdmi.png
+          label: "HDMI PBP"
+          steps:
+            - text: "AVR ON"
+              type: eiscp
+              parameters:
+                cmd: power
+                value: "on"
+            - text: "DDC PBP OFF"
+              type: ddc
+              parameters:
+                vcp: 0xE9
+                value: 0x00
+            - text: "DDC input HDMI-2"
+              type: ddc
+              parameters:
+                vcp: 0x60
+                value: 0x12
+            - text: "DDC PBP 75%-25%"
+              type: ddc
+              parameters:
+                vcp: 0xE9
+                value: 0x2A
+            - text: "DDC PBP-SUB DP"
+              type: ddc
+              parameters:
+                vcp: 0xE8
+                value: 0x0F
+        ddc_power:
+          position: 3
+          icon: ddc_power.png
+          label: "Monitor"
+          steps: []
+        avr_appletv:
+          position: 4
+          icon: avr_appletv.png
+          label: "AVR AppleTV"
+          steps:
+            - text: "AVR AppleTV"
+              type: eiscp
+              parameters:
+                cmd: source
+                value: strm-box
+        avr_nya:
+          position: 5
+          icon: avr_nya.png
+          label: "AVR MacStudio"
+          steps:
+            - text: "AVR MacStudio"
+              type: eiscp
+              parameters:
+                cmd: source
+                value: tv
+        avr_nintendo:
+          position: 6
+          icon: avr_nintendo.png
+          label: "AVR Nintendo"
+          steps:
+            - text: "AVR Nintendo"
+              type: eiscp
+              parameters:
+                cmd: source
+                value: game
+        avr_playstation:
+          position: 7
+          icon: avr_playstation.png
+          label: "AVR PlayStation"
+          steps:
+            - text: "AVR PlayStation"
+              type: eiscp
+              parameters:
+                cmd: source
+                value: dvd
+    - keys:
+        ddc_nya:
+          position: 0
+          icon: ddc_nya.png
+          label: "KVM NYA"
+          steps:
+            - text: "DDC PBP OFF"
+              type: ddc
+              parameters:
+                vcp: 0xE9
+                value: 0x00
+            - text: "DDC input DisplayPort"
+              type: ddc
+              parameters:
+                vcp: 0x60
+                value: 0x0F
+            - text: "AVR MacStudio"
+              type: eiscp
+              parameters:
+                cmd: source
+                value: tv

@@ -14,4 +14,8 @@ Future devices to be supported:
 
 [ENV.md](./ENV.md) contains critical information about the environment where this project can be installed.
 
+## CLI usage
 
+Config and assets must be placed under `~/.config/rpideck`. See examples in [example_config](./example_config/).
+
+For now, just run `rpideck` and it'll start main loop. Buttons on last row (next to screen) act as page selectors.
