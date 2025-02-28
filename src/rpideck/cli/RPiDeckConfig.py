@@ -10,8 +10,6 @@ import logging
 
 
 class RPiDeckConfig:
-    BUTTONS = 8
-
     def _build_schema(self):
         PARAMETERS_DDC = Schema(
             {
@@ -43,30 +41,46 @@ class RPiDeckConfig:
                 PARAMETERS_EISCP.validate(step["parameters"])
             return step
 
-        KEY_SCHEMA = Schema(
+        ACTION_SCHEMA = Schema(
             {
-                "position": lambda n: 0 <= n <= self.BUTTONS,
-                "icon": str,
-                "label": str,
+                # TODO: labels here as well?
                 "steps": [validate_step],
             }
         )
-        PAGE_SCHEMA = Schema({"keys": {str: KEY_SCHEMA}})
+        KEY_SCHEMA = Schema(
+            {
+                "icon": str,
+                Optional("label"): str,
+                "action": str,
+            }
+        )
+        PAGE_SCHEMA = Schema({"title": str, "keys": {int: KEY_SCHEMA}})
         return Schema(
             {
-                "ddc": object, # TODO: implement this
+                "ddc": object,  # TODO: implement this
                 "avr": {
                     "ip": str,
                 },
                 "logging": {
-                    "level": And(str, lambda t: t in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+                    "level": And(
+                        str,
+                        lambda t: t
+                        in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                    ),
                 },
+                "actions": {str: ACTION_SCHEMA},
                 "deck": {
                     "brightness": lambda n: 0 <= n <= 100,
                     "matchSerial": str,
                     "font": str,
                     "highlightColour": str,
-                    "pages": [PAGE_SCHEMA],
+                    "keyLayout": {
+                        "actionButtonCount": lambda n: 1 <= n <= 100,
+                        "prevButtonId": lambda n: 0 <= n <= 100,
+                        "nextButtonId": lambda n: 0 <= n <= 100,
+                    },
+                    "watchdogTimerSeconds": int,
+                    "pages": {int: PAGE_SCHEMA},
                 },
             }
         )
@@ -83,29 +97,35 @@ class RPiDeckConfig:
         validated = self.schema.validate(self.raw_config)
         self.ddc = validated["ddc"]
         self.avr = validated["avr"]
+        self.actions = validated["actions"]
         self.deck = validated["deck"]
         self.logging = validated["logging"]
+        self.BUTTONS = self.deck["keyLayout"]["actionButtonCount"]
+        self.BUTTON_PREV = self.deck["keyLayout"]["prevButtonId"]
+        self.BUTTON_NEXT = self.deck["keyLayout"]["nextButtonId"]
+
+    def getPageInfo(self, page):
+        page_cfg = self.deck["pages"][page]
+        if page_cfg is None:
+            raise Exception(f"no such page {page}")
+        return page_cfg
 
     def getKeyInfo(self, position, page=0, isPresssedDown=False):
         key_name = None
         key_cfg = None
-        page = self.deck["pages"][page]
-        if page is None:
-            raise Exception(f"no such page {page}")
-        for k, v in page["keys"].items():
-            if v["position"] == position:
-                key_name = k
-                key_cfg = v
-                break
-        if key_cfg is None:
+        page_cfg = self.getPageInfo(page)
+        button = page_cfg["keys"][position]
+
+        if button is None:
             raise Exception(f"no such key position {position} on page {page}")
+        action = self.actions.get(button["action"], {"steps": []})
 
         return {
             "name": key_name,
-            "icon": os.path.join(self.assets_path, key_cfg["icon"]),
+            "icon": os.path.join(self.assets_path, button["icon"]),
             "font": self.getFont(),
-            "label": key_cfg["label"],
-            "steps": key_cfg["steps"],
+            "label": button.get("label", None),
+            "steps": action["steps"],
         }
 
     def getFont(self):

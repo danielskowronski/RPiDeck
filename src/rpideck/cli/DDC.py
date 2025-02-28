@@ -21,7 +21,14 @@ class DDCLinux:
             self.logger.warning(f"getvcp for {vcp} exited with {current.returncode}")
             return None
         current_out = str(current.stdout).split("\n")[0].split(" ")
-        current_value = int(f"0{current_out[3]}", 16)  # FIXME: multibyte values
+        if len(current_out) == 4:  # `VCP 60 SNC x0f`
+            current_value = int(f"0{current_out[3]}", 16)
+        elif len(current_out) == 7:  # `VCP E8 CNC xff xff x00 x0f`
+            current_value = int(f"0{current_out[6]}", 16) + 255 * int(
+                f"0{current_out[5]}", 16
+            )
+        else:
+            raise Exception("unknown response type from ddcutil")
         return current_value
 
     def setVCP(self, vcp, new_value, force=False):

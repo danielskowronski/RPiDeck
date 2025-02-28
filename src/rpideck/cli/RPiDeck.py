@@ -7,10 +7,13 @@ from StreamDeck.DeviceManager import DeviceManager
 from StreamDeck.ImageHelpers import PILHelper
 
 from threading import Thread, Lock
+import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 import sched
 import time
 import datetime
 import sys
+import os
 import signal
 from functools import partial
 import traceback
@@ -32,15 +35,17 @@ class RPiDeck:
         self.ddcController = DDCLinux()
         self.avrController = AVR(self.config.avr["ip"])
         sys.excepthook = self.exceptionHandler
-        self.clock_scheduler = sched.scheduler(time.time, time.sleep)
+        self.sched = sched.scheduler(time.time, time.sleep)
+        self.scheduler = BackgroundScheduler()
 
     def openDeck(self, matchSerial=""):
         streamdecks = DeviceManager().enumerate()
         signal.signal(signal.SIGINT, partial(self.sigintHandler))
         for deck in streamdecks:
             deck.open()
-            self.logger.debug(deck.get_serial_number())
-            if matchSerial in deck.get_serial_number():
+            deck_serial = deck.get_serial_number()
+            self.logger.debug(f"Found attached deck with serial {deck_serial}")
+            if matchSerial in deck_serial:
                 self.deck = deck
             deck.close()
         if self.deck is None:
@@ -58,11 +63,15 @@ class RPiDeck:
         self.deck.reset()
         self.deck.set_poll_frequency(100)
         self.deck.set_brightness(self.config.deck["brightness"])
+        self.updateScreenText("RPiDeck starting...", handleLockingHere=True)
         self.loadPage(0)
         self.deck.set_key_callback(self.keyChangeCallback)
-        self.updateScreenText("RPiDeck started")
-        self.clock_scheduler.enter(0.25, 1, self.updateClock)
-        self.clock_scheduler.run()
+        self.lastScreenUpdate = datetime.datetime.now()
+        self.watchdogJob = self.scheduler.add_job(
+            self.watchdog, "interval", seconds=self.config.deck["watchdogTimerSeconds"]
+        )
+        self.clockJob = self.scheduler.add_job(self.updateClock, "interval", seconds=1)
+        self.scheduler.start()
 
     def loadPage(self, page=0):
         self.page = page
@@ -85,23 +94,38 @@ class RPiDeck:
         self, icon_filename, font_filename, label_text, background="black"
     ):
         icon = Image.open(icon_filename)
+        textMargin = 20 if label_text else 0
+        generalMargin = 5
         image = PILHelper.create_scaled_key_image(
-            self.deck, icon, margins=[0, 0, 20, 0], background=background
+            self.deck,
+            icon,
+            margins=[
+                generalMargin,
+                generalMargin,
+                generalMargin + textMargin,
+                generalMargin,
+            ],
+            background=background,
         )
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(font_filename, 14)
-        draw.text(
-            (image.width / 2, image.height - 5),
-            text=label_text,
-            font=font,
-            anchor="ms",
-            fill="white",
-        )
+        if label_text:
+            draw.text(
+                (image.width / 2, image.height - 5),
+                text=label_text,
+                font=font,
+                anchor="ms",
+                fill="white",
+            )
         return PILHelper.to_native_key_format(self.deck, image)
 
-    def updateScreenText(self, text):
+    def updateScreenText(self, text, handleLockingHere=False):
         screenImage = self.renderScreenImage(text, self.config.getFont())
-        with self.deck:
+        # usually locking is handled by self.display_lock which is broader than self.deck
+        if handleLockingHere:
+            with self.deck:
+                self.deck.set_screen_image(screenImage)
+        else:
             self.deck.set_screen_image(screenImage)
 
     def renderScreenImage(self, text, font_filename):
@@ -125,14 +149,15 @@ class RPiDeck:
         if position >= self.config.BUTTONS:
             if isPressedDown:
                 delta = 0
-                if position == self.config.BUTTONS:
+                if position == self.config.BUTTON_PREV:
                     self.logger.info(f"Key {position} pressed => calling page:previous")
                     delta = -1
-                if position == self.config.BUTTONS + 1:
+                if position == self.config.BUTTON_NEXT:
                     self.logger.info(f"Key {position} pressed => calling page:next")
                     delta = +1
                 self.page = (self.page + delta) % self.getPageCount()
                 self.loadPage(self.page)
+                self.updateClock()  # immediately update page number
             else:
                 self.logger.info(f"Key {position} pressed up")
         else:
@@ -141,30 +166,47 @@ class RPiDeck:
             self.logger.info(f"Key {position} on page {self.page} pressed {actionInfo}")
 
             if isPressedDown:
-                with self.deck:
+                with self.display_lock:  # this is broader than with self.deck
                     self.updateKeyImage(
                         position,
                         isPressedDown,
                         self.page,
                         background=self.config.deck["highlightColour"],
                     )
-                    with self.display_lock:
-                        for step in keyInfo["steps"]:
-                            self.updateScreenText(step["text"])
-                            params = step["parameters"]
-                            if step["type"] == "ddc":
-                                self.ddcController.setVCP(
-                                    params["vcp"],
-                                    params["value"],
-                                    params.get("force", False),
-                                )
-                            elif step["type"] == "eiscp":
-                                self.avrController.cmd(params["cmd"], params["value"])
-                        self.updateScreenText("callback finished")
-                        self.updateKeyImage(position, isPressedDown, self.page)
+                    for step in keyInfo["steps"]:
+                        self.updateScreenText(step["text"])
+                        params = step["parameters"]
+                        if step["type"] == "ddc":
+                            self.ddcController.setVCP(
+                                params["vcp"],
+                                params["value"],
+                                params.get("force", False),
+                            )
+                        elif step["type"] == "eiscp":
+                            self.avrController.cmd(params["cmd"], params["value"])
+                    self.updateScreenText("callback finished")
+                    self.updateKeyImage(position, isPressedDown, self.page)
 
     def getPageCount(self):
         return len(self.config.deck["pages"])
+
+    def runWatchdogThreaded(self, job_func):
+        job_thread = threading.Thread(target=job_func)
+        job_thread.start()
+
+    def watchdog(self):
+        now = datetime.datetime.now()
+        delta = (now - self.lastScreenUpdate).seconds
+        if delta >= self.WATCHODG_PERIOD:
+            self.logger.exception(
+                f"watchdog detected that it was {delta} seconds since last screen update, closing handles and exiting"
+            )
+            self.closeDeck()
+            os._exit(1)  # need to close process, not just thread
+        else:
+            self.logger.debug(
+                f"watchdog detected that it was {delta} seconds since last screen update"
+            )
 
     def updateClock(self):
         now = datetime.datetime.now()
@@ -173,20 +215,27 @@ class RPiDeck:
                 now.year, now.month, now.day, now.hour, now.minute, now.second
             )
         else:
+            # TODO: support page labels from config
             text = "page {:01d}/{:01d} | {:02d}:{:02d}:{:02d}".format(
                 self.page + 1, self.getPageCount(), now.hour, now.minute, now.second
             )
         with self.display_lock:
             self.updateScreenText(text)
-        self.clock_scheduler.enter(0.25, 1, self.updateClock)
+            self.lastScreenUpdate = now
+
+    def closeDeck(self):
+        self.deck.reset()
+        self.deck.close()
 
     def exceptionHandler(self, exctype, value, tb):
-        self.logger.exception("".join(traceback.format_exception(exctype, value, tb)))
-        self.logger.exception("Uncaught exception: {0}".format(str(value)))
+        self.logger.exception(
+            "".join(traceback.format_exception(exctype, value, tb)), exc_info=False
+        )
+        self.logger.exception(
+            "Uncaught exception: {0}".format(str(value)), exc_info=False
+        )
 
     def sigintHandler(self, sig, frame):
         self.logger.warning("caught SIGINT")
-        with self.deck:
-            self.deck.reset()
-            self.deck.close()
+        self.closeDeck()
         sys.exit(0)

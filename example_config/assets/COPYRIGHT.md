@@ -6,3 +6,5 @@
 <a target="_blank" href="https://icons8.com/icon/10330/rca">RCA</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
 <a target="_blank" href="https://icons8.com/icon/12519/playstation">Playstation</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
 <a target="_blank" href="https://icons8.com/icon/XaIQdSh4y3F9/nintendo-switch-logo">Nintendo Switch Logo</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+<a target="_blank" href="https://icons8.com/icon/6989/toslink">Toslink</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+<a target="_blank" href="https://icons8.com/icon/9Oy5N3CNV3Y1/apple-arcade">Game</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
