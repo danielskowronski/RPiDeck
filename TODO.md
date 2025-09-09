@@ -1,3 +1,7 @@
 - https://github.com/newAM/monitorcontrol/blob/main/monitorcontrol/vcp/vcp_linux.py
 - explicit types and exceptions
 - setting colour to prev/next buttons
+- remote http api
+- mqtt pub/sub
+- unify logging
+- pass messages from controllers to display

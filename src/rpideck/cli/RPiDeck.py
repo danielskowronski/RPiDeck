@@ -23,6 +23,7 @@ import logging
 from rpideck.cli.RPiDeckConfig import RPiDeckConfig
 from rpideck.cli.DDC import DDCLinux
 from rpideck.cli.AVR import AVR
+from rpideck.cli.SERIAL import SERIAL
 
 
 class RPiDeck:
@@ -33,6 +34,7 @@ class RPiDeck:
         self.deck = None
         self.page = 0
         self.ddcController = DDCLinux()
+        self.serialController = SERIAL(self.config.serial)
         self.avrController = AVR(self.config.avr["ip"])
         sys.excepthook = self.exceptionHandler
         self.sched = sched.scheduler(time.time, time.sleep)
@@ -162,7 +164,7 @@ class RPiDeck:
                 self.logger.info(f"Key {position} pressed up")
         else:
             keyInfo = self.config.getKeyInfo(position, self.page, isPressedDown)
-            actionInfo = f"down => calling {keyInfo['name']}" if isPressedDown else "up"
+            actionInfo = f"down => calling {keyInfo['label']}" if isPressedDown else "up"
             self.logger.info(f"Key {position} on page {self.page} pressed {actionInfo}")
 
             if isPressedDown:
@@ -184,6 +186,8 @@ class RPiDeck:
                             )
                         elif step["type"] == "eiscp":
                             self.avrController.cmd(params["cmd"], params["value"])
+                        elif step["type"] == "serial":
+                            self.serialController.cmd(params["target"], params["bytes"])
                     self.updateScreenText("callback finished")
                     self.updateKeyImage(position, isPressedDown, self.page)
 
@@ -197,7 +201,7 @@ class RPiDeck:
     def watchdog(self):
         now = datetime.datetime.now()
         delta = (now - self.lastScreenUpdate).seconds
-        if delta >= self.WATCHODG_PERIOD:
+        if delta >= self.config.deck["watchdogTimerSeconds"]:
             self.logger.exception(
                 f"watchdog detected that it was {delta} seconds since last screen update, closing handles and exiting"
             )

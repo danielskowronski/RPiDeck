@@ -4,7 +4,43 @@ logging:
 ddc: null
 avr:
   ip: 192.168.0.2
+serial:
+  tesmart:
+    port: /dev/ttyUSB0 # or /dev/serial/by-id/...
+    baudrate: 9600
+    bytesize: 8
+    parity: N
+    stopbits: 1
+    timeout: 3
 actions:
+  kvm_in1:
+    steps:
+      - text: "KVM input 1"
+        type: serial
+        parameters:
+          target: tesmart
+          bytes: [0xAA, 0xBB, 0x03, 0x01, 0x01, 0xEE]
+  kvm_in2:
+    steps:
+      - text: "KVM input 2"
+        type: serial
+        parameters:
+          target: tesmart
+          bytes: [0xAA, 0xBB, 0x03, 0x01, 0x02, 0xEE]
+  kvm_in3:
+    steps:
+      - text: "KVM input 3"
+        type: serial
+        parameters:
+          target: tesmart
+          bytes: [0xAA, 0xBB, 0x03, 0x01, 0x03, 0xEE]
+  kvm_in4:
+    steps:
+      - text: "KVM input 4"
+        type: serial
+        parameters:
+          target: tesmart
+          bytes: [0xAA, 0xBB, 0x03, 0x01, 0x04, 0xEE]
   ddc_nya:
     steps:
       - text: "DDC PBP OFF"

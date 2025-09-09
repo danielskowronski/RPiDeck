@@ -6,11 +6,13 @@ Python agent enabling Elgato StreamDeck Neo connected to Raspberry Pi 5 running 
 
 - Dell monitor over spare HDMI using MCCS over DDC - inputs, KVM, PBP modes
 - Pioneer (Onkyo) AVR - HDMI matrix, audio amplifier source
+- TESmart KVM and any other RS232 devices
 
 Future devices to be supported:
 
 - anything from Home Assistant
 - multimedia devices connected to AVR using HDMI-CEC
+- remote HTTP API with multiple endpoints, aware of KVM connection, especially Kuando BusyLight connected via KVM
 
 [ENV.md](./ENV.md) contains critical information about the environment where this project can be installed.
 

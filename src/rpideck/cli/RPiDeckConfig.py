@@ -2,12 +2,21 @@
 # base on https://github.com/abcminiuser/python-elgato-streamdeck/blob/master/src/example_neo.py by abcminiuser
 #
 # SPDX-License-Identifier: MIT
+from dataclasses import dataclass
 from schema import Schema, And, Or, Use, Optional, SchemaError
 import yaml
 import io
 import os
 import logging
 
+@dataclass
+class SerialConfig:
+  port: str
+  baudrate: int
+  bytesize: int
+  parity: str
+  stopbits: int
+  timeout: int
 
 class RPiDeckConfig:
     def _build_schema(self):
@@ -24,12 +33,18 @@ class RPiDeckConfig:
                 "value": str,
             }
         )
+        PARAMETERS_SERIAL = Schema(
+            {
+                "target": str,
+                "bytes": list[lambda n: 0x00 <= n <= 0xFF],
+            }
+        )
 
         def validate_step(step):
             base_schema = Schema(
                 {
                     "text": str,
-                    "type": And(str, lambda t: t in ["ddc", "eiscp"]),
+                    "type": And(str, lambda t: t in ["ddc", "eiscp", "serial"]),
                     "parameters": dict,
                 }
             )
@@ -39,6 +54,8 @@ class RPiDeckConfig:
                 PARAMETERS_DDC.validate(step["parameters"])
             elif step["type"] == "eiscp":
                 PARAMETERS_EISCP.validate(step["parameters"])
+            elif step["type"] == "serial":
+                PARAMETERS_SERIAL.validate(step["parameters"])
             return step
 
         ACTION_SCHEMA = Schema(
@@ -55,11 +72,26 @@ class RPiDeckConfig:
             }
         )
         PAGE_SCHEMA = Schema({"title": str, "keys": {int: KEY_SCHEMA}})
+        
+        SERIAL_SCHEMA = Schema(
+          {
+            "port": str,
+            "baudrate": int,
+            "bytesize": int,
+            "parity": And(str, lambda t: t in ["Y", "N"]),
+            "stopbits": int,
+            "timeout": int
+          }
+        )
+        
         return Schema(
             {
                 "ddc": object,  # TODO: implement this
                 "avr": {
                     "ip": str,
+                },
+                "serial": {
+                    str: Use(lambda d: SerialConfig(**SERIAL_SCHEMA.validate(d))),
                 },
                 "logging": {
                     "level": And(
@@ -97,6 +129,7 @@ class RPiDeckConfig:
         validated = self.schema.validate(self.raw_config)
         self.ddc = validated["ddc"]
         self.avr = validated["avr"]
+        self.serial = validated["serial"]
         self.actions = validated["actions"]
         self.deck = validated["deck"]
         self.logging = validated["logging"]
