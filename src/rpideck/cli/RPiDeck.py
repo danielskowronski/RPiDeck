@@ -24,6 +24,7 @@ from rpideck.cli.RPiDeckConfig import RPiDeckConfig
 from rpideck.cli.DDC import DDCLinux
 from rpideck.cli.AVR import AVR
 from rpideck.cli.SERIAL import SERIAL
+from rpideck.cli.BusyBar import BusyBar
 
 
 class RPiDeck:
@@ -36,6 +37,7 @@ class RPiDeck:
         self.ddcController = DDCLinux()
         self.serialController = SERIAL(self.config.serial)
         self.avrController = AVR(self.config.avr["ip"])
+        self.busybarController = BusyBar(self.config.busybar["ip"], self.config.busybar["password"])
         sys.excepthook = self.exceptionHandler
         self.sched = sched.scheduler(time.time, time.sleep)
         self.scheduler = BackgroundScheduler()
@@ -188,6 +190,8 @@ class RPiDeck:
                             self.avrController.cmd(params["cmd"], params["value"])
                         elif step["type"] == "serial":
                             self.serialController.cmd(params["target"], params["bytes"])
+                        elif step["type"] == "busybar":
+                            self.busybarController.cmd(params["cmd"], params["value"])
                     self.updateScreenText("callback finished")
                     self.updateKeyImage(position, isPressedDown, self.page)
 

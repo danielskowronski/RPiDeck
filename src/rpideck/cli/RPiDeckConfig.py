@@ -39,12 +39,18 @@ class RPiDeckConfig:
                 "bytes": list[lambda n: 0x00 <= n <= 0xFF],
             }
         )
+        PARAMETERS_BUSYBAR = Schema(
+            {
+                "cmd": str,
+                "value": str,
+            }
+        )
 
         def validate_step(step):
             base_schema = Schema(
                 {
                     "text": str,
-                    "type": And(str, lambda t: t in ["ddc", "eiscp", "serial"]),
+                    "type": And(str, lambda t: t in ["ddc", "eiscp", "serial", "busybar"]),
                     "parameters": dict,
                 }
             )
@@ -56,6 +62,8 @@ class RPiDeckConfig:
                 PARAMETERS_EISCP.validate(step["parameters"])
             elif step["type"] == "serial":
                 PARAMETERS_SERIAL.validate(step["parameters"])
+            elif step["type"] == "busybar":
+                PARAMETERS_BUSYBAR.validate(step["parameters"])
             return step
 
         ACTION_SCHEMA = Schema(
@@ -89,6 +97,10 @@ class RPiDeckConfig:
                 "ddc": object,  # TODO: implement this
                 "avr": {
                     "ip": str,
+                },
+                "busybar": {
+                    "ip": str,
+                    "password": str,
                 },
                 "serial": {
                     str: Use(lambda d: SerialConfig(**SERIAL_SCHEMA.validate(d))),
@@ -129,6 +141,7 @@ class RPiDeckConfig:
         validated = self.schema.validate(self.raw_config)
         self.ddc = validated["ddc"]
         self.avr = validated["avr"]
+        self.busybar = validated["busybar"]
         self.serial = validated["serial"]
         self.actions = validated["actions"]
         self.deck = validated["deck"]
