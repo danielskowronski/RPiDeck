@@ -30,3 +30,38 @@ pipx install rpideck
 Config and assets must be placed under `~/.config/rpideck`. See examples in [example_config](./example_config/).
 
 For now, just run `rpideck` and it'll start main loop. Buttons on last row (next to screen) act as page selectors.
+
+## Daemon
+
+It can be run wit user systemd unit. Here's example config to run from pipx:
+
+`~.config/systemd/user/rpideck.service`:
+
+```
+[Unit]
+Description=RPiDeck
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=/home/rpideck/.local/pipx/venvs/rpideck/bin/rpideck
+Restart=always
+RestartSec=1
+KillSignal=SIGINT
+TimeoutStopSec=10
+RestartKillSignal=SIGINT
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+systemctl --user enable --now rpideck
+systemctl --user status rpideck
+journalctl --user -u rpideck.service
+```
+
+Just ensure that user has correct permissions. For now on Ubuntu, this means following:
+
+1. for DDC - group `i2c`
+2. for serial port - group `dialout`
